@@ -1,7 +1,7 @@
-<h1>Hand On #3</h1>
+<h1>Hand On</h1>
 
 <h3>By 642115011 Yanwarut</h3>
 
-This is for submission on module 03
+<p>This is for submission on module 03 hand on #2</p>
 - The code & result are in "m3.ipynb"
 
