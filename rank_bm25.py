@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-
 import math
 import numpy as np
 from multiprocessing import Pool, cpu_count
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 """
 All of these algorithms have been taken from the paper:
@@ -76,7 +75,7 @@ class BM25:
 
 
 class BM25Okapi(BM25):
-    def __init__(self, corpus, tokenizer=None, k1=1.5, b=0.75, epsilon=0.25):
+    def __init__(self, corpus, tokenizer=None, k1=1.6, b=0.75, epsilon=0.25):
         self.k1 = k1
         self.b = b
         self.epsilon = epsilon
@@ -135,7 +134,7 @@ class BM25Okapi(BM25):
 
 
 class BM25L(BM25):
-    def __init__(self, corpus, tokenizer=None, k1=1.5, b=0.75, delta=0.5):
+    def __init__(self, corpus, tokenizer=None, k1=1.6, b=0.75, delta=0.5):
         # Algorithm specific parameters
         self.k1 = k1
         self.b = b
@@ -173,12 +172,20 @@ class BM25L(BM25):
 
 
 class BM25Plus(BM25):
-    def __init__(self, corpus, tokenizer=None, k1=1.5, b=0.75, delta=1):
+    def __init__(self, corpus, custom_preprocessor ,tokenizer=None, k1=1.6, b=0.75, delta=1):
         # Algorithm specific parameters
         self.k1 = k1
         self.b = b
         self.delta = delta
-        super().__init__(corpus, tokenizer)
+        # super().__init__(corpus, tokenizer)
+
+        # Create and fit TF-IDF vectorizer with custom preprocessor
+        self.vectorizer = TfidfVectorizer(tokenizer=tokenizer, preprocessor=custom_preprocessor, use_idf=True, ngram_range=(2, 2))
+        self.tfidf_matrix = self.vectorizer.fit_transform(corpus)
+        self.doc_len = np.squeeze(np.asarray(self.tfidf_matrix.sum(axis=1)))
+        self.avgdl = np.mean(self.doc_len)
+        self.corpus_size = len(corpus)
+        self.idf = self.vectorizer.idf_ - 1.0  # IDF values from TF-IDF vectorizer
 
     def _calc_idf(self, nd):
         for word, freq in nd.items():
@@ -186,12 +193,25 @@ class BM25Plus(BM25):
             self.idf[word] = idf
 
     def get_scores(self, query):
+        # score = np.zeros(self.corpus_size)
+        # doc_len = np.array(self.doc_len)
+        # for q in query:
+        #     q_freq = np.array([(doc.get(q) or 0) for doc in self.doc_freqs])
+        #     score += (self.idf.get(q) or 0) * (self.delta + (q_freq * (self.k1 + 1)) /
+        #                                        (self.k1 * (1 - self.b + self.b * doc_len / self.avgdl) + q_freq))
+        # return score
+
         score = np.zeros(self.corpus_size)
-        doc_len = np.array(self.doc_len)
-        for q in query:
-            q_freq = np.array([(doc.get(q) or 0) for doc in self.doc_freqs])
-            score += (self.idf.get(q) or 0) * (self.delta + (q_freq * (self.k1 + 1)) /
-                                               (self.k1 * (1 - self.b + self.b * doc_len / self.avgdl) + q_freq))
+        q_tfidf = self.vectorizer.transform([query])
+        q_terms = q_tfidf.indices
+        q_weights = q_tfidf.data
+
+        for q_idx, term in enumerate(q_terms):
+            q_term_weight = q_weights[q_idx]
+            q_freq = self.tfidf_matrix[:, term].toarray().ravel()
+            score += (self.idf[term] * self.delta + q_term_weight * (self.k1 + 1)) / \
+                     (q_term_weight + self.k1 * (1 - self.b + self.b * self.doc_len / self.avgdl) + q_freq * self.delta)
+
         return score
 
     def get_batch_scores(self, query, doc_ids):

@@ -55,7 +55,6 @@ if __name__ == '__main__':
     query = [args.query]
     print("Searching for terms: " + str(query))
 
-
     transformed_query = tf_idf_vectorizer.transform(query)
     transformed_query_df = pd.DataFrame(transformed_query.toarray(), columns=tf_idf_vectorizer.get_feature_names_out()).loc[0]
     q_dot_d = X_tfidf_df.dot(transformed_query_df.T)
@@ -68,3 +67,9 @@ if __name__ == '__main__':
     rank = np.argsort(score)[::-1]
     print("BM25 SCORING")
     print(cleaned_description.iloc[rank[:5]])
+
+    bm25_2 = rank_bm25.BM25Plus(cleaned_description, my_custom_preprocessor)
+    doc_scores = bm25_2.get_scores(args.query)
+    bm25_2_rank = np.argsort(doc_scores)[::-1]
+    print(cleaned_description.iloc[bm25_2_rank[:5]])
+    print(doc_scores)
