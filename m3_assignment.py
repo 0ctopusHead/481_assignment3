@@ -68,8 +68,8 @@ if __name__ == '__main__':
     print("BM25 SCORING")
     print(cleaned_description.iloc[rank[:5]])
 
+    print("RANK_BM25 SCORING")
     bm25_2 = rank_bm25.BM25Plus(cleaned_description, my_custom_preprocessor)
     doc_scores = bm25_2.get_scores(args.query)
     bm25_2_rank = np.argsort(doc_scores)[::-1]
     print(cleaned_description.iloc[bm25_2_rank[:5]])
-    print(doc_scores)
