@@ -2,14 +2,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import string
 import requests
-import numpy as np
-import nltk
+import argparse
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
-
-nltk.download('stopwords')
-nltk.download('punkt')
 
 
 # to remove unwanted things in the data
@@ -86,3 +81,8 @@ def search(invert_idx, query):
     return matched
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("query", type=str)
+    args = parser.parse_args()
+    print(args.query)
